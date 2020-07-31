@@ -17,7 +17,7 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
         override fun toString(): String = "E"
     }
 
-    internal class T<out E : Comparable<@UnsafeVariance E>>(
+    internal data class T<out E : Comparable<@UnsafeVariance E>>(
         internal val left: Tree<E>,
         internal val root: E,
         internal val right: Tree<E>
