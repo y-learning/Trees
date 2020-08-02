@@ -1,3 +1,5 @@
+import list.List
+
 sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
     abstract fun isEmpty(): Boolean
@@ -31,5 +33,15 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
     companion object {
 
         operator fun <E : Comparable<E>> invoke(): Tree<E> = Empty
+
+        operator fun <E : Comparable<E>> invoke(vararg az: E): Tree<E> =
+            az.fold(Empty) { acc: Tree<E>, e: E -> acc + e }
+
+        operator fun <E : Comparable<E>> invoke(list: List<E>): Tree<E> =
+            list.foldLeft<Tree<E>>(Empty) { acc: Tree<E> ->
+                { e: E ->
+                    acc + e
+                }
+            }
     }
 }
