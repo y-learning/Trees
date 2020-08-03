@@ -4,6 +4,15 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
     abstract fun isEmpty(): Boolean
 
+    fun contains(e: @UnsafeVariance E): Boolean = when (this) {
+        Empty -> false
+        is T -> when {
+            e < root -> left.contains(e)
+            e > root -> right.contains(e)
+            else -> true
+        }
+    }
+
     operator fun plus(element: @UnsafeVariance E): Tree<E> = when (this) {
         Empty -> T(Empty, element, Empty)
         is T -> when {
