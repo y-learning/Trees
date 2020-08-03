@@ -282,11 +282,11 @@ sealed class List<out E> {
 
     internal class Cons<E>(private val head: E, private val tail: List<E>) :
         List<E>() {
-        override val length: Int = tail.length() + 1
+        override val length: Int = tail.length + 1
 
         override fun isEmpty(): Boolean = false
 
-        override fun length(): Int = foldLeft(0) { i: Int -> { inc(i) } }
+        override fun length(): Int = foldRight(0) { { i: Int -> inc(i) } }
 
         override fun lengthMemoized(): Int = length
 
