@@ -1,4 +1,5 @@
 import list.List
+import result.Result
 import kotlin.math.max
 
 sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
@@ -8,6 +9,10 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
     abstract val size: Int
 
     abstract val height: Int
+
+    abstract fun max(): Result<E>
+
+    abstract fun min(): Result<E>
 
     fun contains(e: @UnsafeVariance E): Boolean = when (this) {
         Empty -> false
@@ -34,6 +39,10 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
         override val height: Int = -1
 
+        override fun max(): Result<Nothing> = Result()
+
+        override fun min(): Result<Nothing> = Result()
+
         override fun toString(): String = "E"
     }
 
@@ -45,9 +54,13 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
         override fun isEmpty(): Boolean = false
 
-        override val size: Int = 1 + left.size +right.size
+        override val size: Int = 1 + left.size + right.size
 
-        override val height: Int = 1 + max(left.height , right.height)
+        override val height: Int = 1 + max(left.height, right.height)
+
+        override fun max(): Result<E> = right.max().orElse { Result(root) }
+
+        override fun min(): Result<E> = left.min().orElse { Result(root) }
 
         override fun toString(): String = "(T $left $root $right)"
     }
