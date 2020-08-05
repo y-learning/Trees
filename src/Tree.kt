@@ -32,6 +32,26 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
         }
     }
 
+    fun removeMerge(tree: Tree<@UnsafeVariance E>): Tree<E> = when (this) {
+        Empty -> tree
+        is T -> when (tree) {
+            Empty -> this
+            is T -> when {
+                tree.root < root -> T(left.removeMerge(tree), root, right)
+                else -> T(left, root, right.removeMerge(tree))
+            }
+        }
+    }
+
+    fun remove(e: @UnsafeVariance E): Tree<E> = when (this) {
+        Empty -> this
+        is T -> when {
+            e < root -> T(left.remove(e), root, right)
+            e > root -> T(left, root, right.remove(e))
+            else -> left.removeMerge(right)
+        }
+    }
+
     internal object Empty : Tree<Nothing>() {
         override fun isEmpty(): Boolean = true
 
