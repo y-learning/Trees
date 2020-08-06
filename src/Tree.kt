@@ -16,6 +16,10 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
     abstract fun merge(tree: Tree<@UnsafeVariance E>): Tree<E>
 
+    abstract fun <T> foldLeft(identity: T,
+                              f: (T) -> (E) -> T,
+                              g: (T) -> (T) -> T): T
+
     fun contains(e: @UnsafeVariance E): Boolean = when (this) {
         Empty -> false
         is T -> when {
@@ -67,6 +71,10 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
         override fun merge(tree: Tree<Nothing>): Tree<Nothing> = tree
 
+        override fun <T> foldLeft(identity: T,
+                                  f: (T) -> (Nothing) -> T,
+                                  g: (T) -> (T) -> T): T = identity
+
         override fun toString(): String = "E"
     }
 
@@ -103,6 +111,14 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
                         T(left.merge(tree.left), root, right.merge(tree.right))
                 }
             }
+
+        override fun <T> foldLeft(identity: T,
+                                  f: (T) -> (E) -> T,
+                                  g: (T) -> (T) -> T): T =
+//            g(right.foldLeft(identity, f, g))(f(left
+//                .foldLeft(identity, f, g))(root))
+            f(g(right.foldLeft(identity, f, g))(left
+                .foldLeft(identity, f, g)))(root)
 
         override fun toString(): String = "(T $left $root $right)"
     }
