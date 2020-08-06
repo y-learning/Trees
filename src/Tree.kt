@@ -20,6 +20,12 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
                               f: (T) -> (E) -> T,
                               g: (T) -> (T) -> T): T
 
+    abstract fun <T> foldInOrder(identity: T, f: (T) -> (E) -> (T) -> T): T
+
+    abstract fun <T> foldPreOrder(identity: T, f: (E) -> (T) -> (T) -> T): T
+
+    abstract fun <T> foldPostOrder(identity: T, f: (T) -> (T) -> (E) -> T): T
+
     fun contains(e: @UnsafeVariance E): Boolean = when (this) {
         Empty -> false
         is T -> when {
@@ -75,6 +81,18 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
                                   f: (T) -> (Nothing) -> T,
                                   g: (T) -> (T) -> T): T = identity
 
+        override
+        fun <T> foldInOrder(identity: T, f: (T) -> (Nothing) -> (T) -> T): T =
+            identity
+
+        override
+        fun <T> foldPreOrder(identity: T, f: (Nothing) -> (T) -> (T) -> T): T =
+            identity
+
+        override
+        fun <T> foldPostOrder(identity: T, f: (T) -> (T) -> (Nothing) -> T): T =
+            identity
+
         override fun toString(): String = "E"
     }
 
@@ -119,6 +137,21 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 //                .foldLeft(identity, f, g))(root))
             f(g(right.foldLeft(identity, f, g))(left
                 .foldLeft(identity, f, g)))(root)
+
+        override
+        fun <T> foldInOrder(identity: T, f: (T) -> (E) -> (T) -> T): T =
+            f(left.foldInOrder(identity, f))(root)(right
+                .foldInOrder(identity, f))
+
+        override
+        fun <T> foldPreOrder(identity: T, f: (E) -> (T) -> (T) -> T): T =
+            f(root)(left.foldPreOrder(identity, f))(right
+                .foldPreOrder(identity, f))
+
+        override
+        fun <T> foldPostOrder(identity: T, f: (T) -> (T) -> (E) -> T): T =
+            f(left.foldPostOrder(identity, f))(right
+                .foldPostOrder(identity, f))(root)
 
         override fun toString(): String = "(T $left $root $right)"
     }
