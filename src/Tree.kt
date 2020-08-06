@@ -133,11 +133,9 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
         override fun <T> foldLeft(identity: T,
                                   f: (T) -> (E) -> T,
                                   g: (T) -> (T) -> T): T =
-//            g(right.foldLeft(identity, f, g))(f(left
-//                .foldLeft(identity, f, g))(root))
-            f(g(right.foldLeft(identity, f, g))(left
-                .foldLeft(identity, f, g)))(root)
-
+            g(right.foldLeft(identity, f, g))(f(left
+                .foldLeft(identity, f, g))(root))
+        
         override
         fun <T> foldInOrder(identity: T, f: (T) -> (E) -> (T) -> T): T =
             f(left.foldInOrder(identity, f))(root)(right
