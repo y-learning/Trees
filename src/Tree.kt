@@ -20,6 +20,10 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
                               f: (T) -> (E) -> T,
                               g: (T) -> (T) -> T): T
 
+    abstract fun <T> foldRight(identity: T,
+                               f: (E) -> (T) -> T,
+                               g: (T) -> (T) -> T): T
+
     abstract fun <T> foldInOrder(identity: T, f: (T) -> (E) -> (T) -> T): T
 
     abstract fun <T> foldPreOrder(identity: T, f: (E) -> (T) -> (T) -> T): T
@@ -81,6 +85,10 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
                                   f: (T) -> (Nothing) -> T,
                                   g: (T) -> (T) -> T): T = identity
 
+        override fun <T> foldRight(identity: T,
+                                   f: (Nothing) -> (T) -> T,
+                                   g: (T) -> (T) -> T): T = identity
+
         override
         fun <T> foldInOrder(identity: T, f: (T) -> (Nothing) -> (T) -> T): T =
             identity
@@ -135,7 +143,13 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
                                   g: (T) -> (T) -> T): T =
             g(right.foldLeft(identity, f, g))(f(left
                 .foldLeft(identity, f, g))(root))
-        
+
+        override fun <T> foldRight(identity: T,
+                                   f: (E) -> (T) -> T,
+                                   g: (T) -> (T) -> T): T =
+            g(f(root)(left.foldRight(identity, f, g)))(right
+                .foldRight(identity, f, g))
+
         override
         fun <T> foldInOrder(identity: T, f: (T) -> (E) -> (T) -> T): T =
             f(left.foldInOrder(identity, f))(root)(right
