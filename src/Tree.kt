@@ -14,6 +14,8 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
     abstract fun min(): Result<E>
 
+    abstract fun merge(tree: Tree<@UnsafeVariance E>): Tree<E>
+
     fun contains(e: @UnsafeVariance E): Boolean = when (this) {
         Empty -> false
         is T -> when {
@@ -63,6 +65,8 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
         override fun min(): Result<Nothing> = Result()
 
+        override fun merge(tree: Tree<Nothing>): Tree<Nothing> = tree
+
         override fun toString(): String = "E"
     }
 
@@ -81,6 +85,24 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
         override fun max(): Result<E> = right.max().orElse { Result(root) }
 
         override fun min(): Result<E> = left.min().orElse { Result(root) }
+
+        override fun merge(tree: Tree<@UnsafeVariance E>): Tree<E> =
+            when (tree) {
+                Empty -> this
+                is T -> when {
+                    tree.root > root -> {
+                        val treeRight = T(Empty, tree.root, tree.right)
+                        T(left, root, right.merge(treeRight)).merge(tree.left)
+                    }
+
+                    tree.root < root -> {
+                        val treeLeft = T(tree.left, tree.root, Empty)
+                        T(left.merge(treeLeft), root, right).merge(tree.right)
+                    }
+                    else ->
+                        T(left.merge(tree.left), root, right.merge(tree.right))
+                }
+            }
 
         override fun toString(): String = "(T $left $root $right)"
     }
