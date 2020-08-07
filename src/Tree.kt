@@ -181,5 +181,28 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
                     acc + e
                 }
             }
+
+        operator fun <E : Comparable<E>> invoke(tree1: Tree<E>,
+                                                root: E,
+                                                tree2: Tree<E>): Tree<E> {
+            fun isOrdered(left: Tree<E>, root: E, right: Tree<E>): Boolean =
+                left.max().flatMap { lMax: E ->
+                    right.min().map { rMin: E -> lMax < root && root < rMin }
+                }.getOrElse(left.isEmpty() && right.isEmpty()) ||
+                    left.min()
+                        .mapEmptyToSuccess()
+                        .flatMap { right.min().map { rMin: E -> root < rMin } }
+                        .getOrElse(false) ||
+                    right.min()
+                        .mapEmptyToSuccess()
+                        .flatMap { left.max().map { lMax: E -> lMax < root } }
+                        .getOrElse(false)
+
+            return when {
+                isOrdered(tree1, root, tree2) -> T(tree1, root, tree2)
+                isOrdered(tree2, root, tree1) -> T(tree2, root, tree1)
+                else -> Tree(root).merge(tree1).merge(tree2)
+            }
+        }
     }
 }
