@@ -1,3 +1,4 @@
+import Tree.T
 import list.List
 import list.concat
 import result.Result
@@ -72,6 +73,16 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
             else -> left.removeMerge(right)
         }
     }
+
+    fun <T : Comparable<T>> map(f: (E) -> T): Tree<T> =
+        foldInOrder(Empty) { t1: Tree<T> ->
+            { e: E ->
+                { t2: Tree<T> ->
+                    T(t1, f(e), t2)
+                }
+            }
+        }
+
 
     internal object Empty : Tree<Nothing>() {
         override fun isEmpty(): Boolean = true
