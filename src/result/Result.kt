@@ -12,6 +12,8 @@ sealed class Result<out A> : Serializable {
 
     abstract fun mapEmpty(errMsg: String): Result<A>
 
+    abstract fun mapEmptyToSuccess(): Result<Any>
+
     abstract fun <E : RuntimeException> mapFailure(
         msg: String,
         f: (e: RuntimeException) -> (msg: String) -> E): Result<A>
@@ -71,6 +73,8 @@ sealed class Result<out A> : Serializable {
         override fun mapEmpty(errMsg: String): Result<Nothing> =
             Failure(RuntimeException(errMsg))
 
+        override fun mapEmptyToSuccess(): Result<Any> = Result(Any())
+
         override fun forEach(
             onSuccess: (Nothing) -> Unit,
             onFailure: (RuntimeException) -> Unit,
@@ -100,6 +104,8 @@ sealed class Result<out A> : Serializable {
             Failure(f(exception)(msg))
 
         override fun mapEmpty(errMsg: String): Result<A> = this
+
+        override fun mapEmptyToSuccess(): Result<Any> = Failure(exception)
 
         override fun forEach(
             onSuccess: (A) -> Unit,
@@ -137,6 +143,8 @@ sealed class Result<out A> : Serializable {
             f: (e: RuntimeException) -> (msg: String) -> E): Result<A> = this
 
         override fun mapEmpty(errMsg: String): Result<A> = this
+
+        override fun mapEmptyToSuccess(): Result<Any> = failure("Not Empty")
 
         override fun forEach(
             onSuccess: (A) -> Unit,
