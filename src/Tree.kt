@@ -36,6 +36,10 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
     abstract fun <T> foldLeft(identity: T, f: (T) -> (E) -> T): T
 
+    protected abstract fun rotateRight(): Tree<E>
+
+    protected abstract fun rotateLeft(): Tree<E>
+
     fun contains(e: @UnsafeVariance E): Boolean = when (this) {
         Empty -> false
         is T -> when {
@@ -83,7 +87,6 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
             }
         }
 
-
     internal object Empty : Tree<Nothing>() {
         override fun isEmpty(): Boolean = true
 
@@ -121,6 +124,10 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
         override fun <T> foldLeft(identity: T, f: (T) -> (Nothing) -> T): T =
             identity
+
+        override fun rotateRight(): Tree<Nothing> = this
+
+        override fun rotateLeft(): Tree<Nothing> = this
 
         override fun toString(): String = "E"
     }
@@ -193,6 +200,16 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
         override fun <T> foldLeft(identity: T, f: (T) -> (E) -> T): T =
             toListPreOrderLeft().foldLeft(identity, f)
+
+        override fun rotateRight(): Tree<E> = when (left) {
+            Empty -> this
+            is T -> T(left.left, left.root, T(left.right, root, right))
+        }
+
+        override fun rotateLeft(): Tree<E> = when (right) {
+            Empty -> this
+            is T -> T(T(left, root, right.left), right.root, right.right)
+        }
 
         override fun toString(): String = "(T $left $root $right)"
     }
