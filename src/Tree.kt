@@ -92,6 +92,11 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
     // TODO : Implement toListInOrderLeft(), toListPreOrderRight(),
     //  toListPostOrderRight()
 
+    fun log2nlz(n: Int): Int = when (n) {
+        0 -> 0
+        else -> 31 - Integer.numberOfLeadingZeros(n)
+    }
+
     internal object Empty : Tree<Nothing>() {
         override fun isEmpty(): Boolean = true
 
