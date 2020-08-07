@@ -89,6 +89,9 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
     fun toListInOrderRight(): List<E> = unbalanceRight(List(), this)
 
+    // TODO : Implement toListInOrderLeft(), toListPreOrderRight(),
+    //  toListPostOrderRight()
+
     internal object Empty : Tree<Nothing>() {
         override fun isEmpty(): Boolean = true
 
