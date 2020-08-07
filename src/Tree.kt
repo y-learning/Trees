@@ -87,6 +87,8 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
             }
         }
 
+    fun toListInOrderRight(): List<E> = unbalanceRight(List(), this)
+
     internal object Empty : Tree<Nothing>() {
         override fun isEmpty(): Boolean = true
 
@@ -250,5 +252,15 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
                 else -> Tree(root).merge(tree1).merge(tree2)
             }
         }
+
+        tailrec fun <E : Comparable<E>> unbalanceRight(acc: List<E>,
+                                                       tree: Tree<E>): List<E> =
+            when (tree) {
+                Empty -> acc
+                is T -> when (tree.left) {
+                    Empty -> unbalanceRight(acc.cons(tree.root), tree.right)
+                    is T -> unbalanceRight(acc, tree.rotateRight())
+                }
+            }
     }
 }
