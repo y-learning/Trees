@@ -1,4 +1,5 @@
 import list.List
+import list.concat
 import result.Result
 import kotlin.math.max
 
@@ -29,6 +30,8 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
     abstract fun <T> foldPreOrder(identity: T, f: (E) -> (T) -> (T) -> T): T
 
     abstract fun <T> foldPostOrder(identity: T, f: (T) -> (T) -> (E) -> T): T
+
+    abstract fun toListPreOrderLeft(): List<E>
 
     fun contains(e: @UnsafeVariance E): Boolean = when (this) {
         Empty -> false
@@ -101,6 +104,8 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
         fun <T> foldPostOrder(identity: T, f: (T) -> (T) -> (Nothing) -> T): T =
             identity
 
+        override fun toListPreOrderLeft(): List<Nothing> = List()
+
         override fun toString(): String = "E"
     }
 
@@ -164,6 +169,11 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
         fun <T> foldPostOrder(identity: T, f: (T) -> (T) -> (E) -> T): T =
             f(left.foldPostOrder(identity, f))(right
                 .foldPostOrder(identity, f))(root)
+
+        override fun toListPreOrderLeft(): List<E> =
+            left.toListPreOrderLeft()
+                .concat(right.toListPreOrderLeft())
+                .cons(root)
 
         override fun toString(): String = "(T $left $root $right)"
     }
