@@ -33,6 +33,8 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
     abstract fun toListPreOrderLeft(): List<E>
 
+    abstract fun <T> foldLeft(identity: T, f: (T) -> (E) -> T): T
+
     fun contains(e: @UnsafeVariance E): Boolean = when (this) {
         Empty -> false
         is T -> when {
@@ -106,6 +108,9 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
         override fun toListPreOrderLeft(): List<Nothing> = List()
 
+        override fun <T> foldLeft(identity: T, f: (T) -> (Nothing) -> T): T =
+            identity
+
         override fun toString(): String = "E"
     }
 
@@ -174,6 +179,9 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
             left.toListPreOrderLeft()
                 .concat(right.toListPreOrderLeft())
                 .cons(root)
+
+        override fun <T> foldLeft(identity: T, f: (T) -> (E) -> T): T =
+            toListPreOrderLeft().foldLeft(identity, f)
 
         override fun toString(): String = "(T $left $root $right)"
     }
