@@ -52,12 +52,12 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
     operator fun plus(e: @UnsafeVariance E): Tree<E> {
         fun plusUnbalanced(e: @UnsafeVariance E, t: Tree<E>): Tree<E> =
-            when (this) {
+            when (t) {
                 Empty -> T(Empty, e, Empty)
                 is T -> when {
-                    e > this.root -> T(left, root, right + e)
-                    e < this.root -> T(left + e, root, right)
-                    else -> T(this.left, e, right)
+                    e > t.root -> T(t.left, t.root, t.right + e)
+                    e < t.root -> T(t.left + e, t.root, t.right)
+                    else -> T(t.left, e, t.right)
                 }
             }
 
