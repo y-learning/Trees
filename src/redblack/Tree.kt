@@ -40,7 +40,7 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
         override val height: Int = 1 + max(left.height, right.height)
 
-        override fun toString(): String = "$color $left $root $right"
+        override fun toString(): String = "T $color $left $root $right"
     }
 
     companion object {
