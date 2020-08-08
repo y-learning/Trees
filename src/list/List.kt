@@ -2,7 +2,6 @@ package list
 
 import option.Option
 import result.Result
-import java.lang.RuntimeException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 

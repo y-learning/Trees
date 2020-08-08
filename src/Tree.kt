@@ -2,6 +2,7 @@ import Tree.T
 import list.List
 import list.concat
 import result.Result
+import kotlin.math.abs
 import kotlin.math.max
 
 sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
@@ -91,11 +92,6 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
     // TODO : Implement toListInOrderLeft(), toListPreOrderRight(),
     //  toListPostOrderRight()
-
-    fun log2nlz(n: Int): Int = when (n) {
-        0 -> 0
-        else -> 31 - Integer.numberOfLeadingZeros(n)
-    }
 
     internal object Empty : Tree<Nothing>() {
         override fun isEmpty(): Boolean = true
@@ -261,14 +257,64 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
             }
         }
 
-        tailrec fun <E : Comparable<E>> unbalanceRight(acc: List<E>,
-                                                       tree: Tree<E>): List<E> =
-            when (tree) {
-                Empty -> acc
-                is T -> when (tree.left) {
-                    Empty -> unbalanceRight(acc.cons(tree.root), tree.right)
-                    is T -> unbalanceRight(acc, tree.rotateRight())
-                }
+        tailrec
+        fun <E : Comparable<E>> unbalanceRight(acc: List<E>, tree: Tree<E>):
+            List<E> = when (tree) {
+            Empty -> acc
+            is T -> when (tree.left) {
+                Empty -> unbalanceRight(acc.cons(tree.root), tree.right)
+                is T -> unbalanceRight(acc, tree.rotateRight())
             }
+        }
+
+        private fun <E : Comparable<E>> deltaHeight(tree: T<E>) =
+            abs(tree.left.height - tree.right.height)
+
+        private fun <E : Comparable<E>> isUnbalanced(tree: Tree<E>): Boolean =
+            when (tree) {
+                Empty -> false
+                is T -> deltaHeight(tree) > (tree.size - 1) % 2
+            }
+
+        private fun <E : Comparable<E>> balanceFirstLvl(tree: Tree<E>):
+            Tree<E> = unfold(tree) { t: Tree<E> ->
+            when {
+                isUnbalanced(t) -> (t as T<E>).let {
+                    if (it.right.height < it.left.height)
+                        Result(t.rotateRight())
+                    else Result(t.rotateLeft())
+                }
+                else -> Result()
+            }
+        }
+
+        private fun <E : Comparable<E>> balanceHelper(tree: Tree<E>):
+            Tree<E> = when {
+            tree is T && tree.height > log2nlz(tree.size) ->
+                if (deltaHeight(tree) > 1) balanceHelper(balanceFirstLvl(tree))
+                else T(balanceHelper(tree.left), tree.root,
+                    balanceHelper(tree.right))
+            else -> tree
+        }
+
+        fun <E : Comparable<E>> balance(tree: Tree<E>): Tree<E> =
+            balanceHelper(tree.toListInOrderRight().foldLeft(Empty)
+            { acc: Tree<E> -> { e: E -> T(Empty, e, acc) } })
     }
+}
+
+fun log2nlz(n: Int): Int = when (n) {
+    0 -> 0
+    else -> 31 - Integer.numberOfLeadingZeros(n)
+}
+
+fun <E> unfold(e: E, f: (E) -> Result<E>): E {
+    tailrec
+    fun <E> unfold(pair: Pair<Result<E>, Result<E>>, f: (E) -> Result<E>):
+        Pair<Result<E>, Result<E>> = when (val r2 = pair.second) {
+        is Result.Success -> unfold(Pair(r2, r2.flatMap { f(it) }), f)
+        else -> pair
+    }
+
+    return Result(e).let { unfold(Pair(it, it), f).first.getOrElse(e) }
 }
