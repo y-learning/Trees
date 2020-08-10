@@ -14,7 +14,7 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
     internal abstract val color: Color
 
     internal abstract class Empty<out E : Comparable<@UnsafeVariance E>> :
-        Tree<E>() {
+            Tree<E>() {
         override fun isEmpty(): Boolean = true
 
         override val color: Color = Black
@@ -29,10 +29,10 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
     internal object E : Empty<Nothing>()
 
     internal class T<out E : Comparable<@UnsafeVariance E>>(
-        override val color: Color,
-        internal val left: Tree<E>,
-        internal val root: E,
-        internal val right: Tree<E>) : Tree<E>() {
+            override val color: Color,
+            internal val left: Tree<E>,
+            internal val root: E,
+            internal val right: Tree<E>) : Tree<E>() {
 
         override fun isEmpty(): Boolean = false
 
