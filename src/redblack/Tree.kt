@@ -19,6 +19,8 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
     abstract fun max(): Result<E>
 
+    abstract fun min(): Result<E>
+
     internal abstract fun redder(): Tree<E>
     internal abstract fun add(e: @UnsafeVariance E): Tree<E>
     internal abstract fun delete(e: @UnsafeVariance E): Tree<E>
@@ -81,6 +83,8 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
         override fun max(): Result<E> = Result()
 
+        override fun min(): Result<E> = Result()
+
         override fun add(e: @UnsafeVariance E): Tree<E> = T(Red, E, e, E)
 
         override fun delete(e: @UnsafeVariance E): Tree<E> = E
@@ -139,6 +143,11 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
         override fun max(): Result<E> = when {
             right.isEmpty -> Result(root)
             else -> right.max()
+        }
+
+        override fun min(): Result<E> = when {
+            left.isEmpty -> Result(root)
+            else -> left.min()
         }
 
         override fun add(e: @UnsafeVariance E): Tree<E> = when {
