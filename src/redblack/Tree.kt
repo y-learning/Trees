@@ -23,6 +23,20 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
     abstract fun contains(e: @UnsafeVariance E): Boolean
 
+    abstract fun <T> foldLeft(identity: T,
+                              f: (T) -> (E) -> T,
+                              g: (T) -> (T) -> T): T
+
+    abstract fun <T> foldRight(identity: T,
+                               f: (E) -> (T) -> T,
+                               g: (T) -> (T) -> T): T
+
+    abstract fun <T> foldInOrder(identity: T, f: (T) -> (E) -> (T) -> T): T
+
+    abstract fun <T> foldPreOrder(identity: T, f: (E) -> (T) -> (T) -> T): T
+
+    abstract fun <T> foldPostOrder(identity: T, f: (T) -> (T) -> (E) -> T): T
+
     internal abstract fun redder(): Tree<E>
     internal abstract fun add(e: @UnsafeVariance E): Tree<E>
     internal abstract fun delete(e: @UnsafeVariance E): Tree<E>
@@ -90,6 +104,23 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
         override fun min(): Result<E> = Result()
 
         override fun contains(e: @UnsafeVariance E): Boolean = false
+
+        override fun <T> foldLeft(identity: T,
+                                  f: (T) -> (E) -> T,
+                                  g: (T) -> (T) -> T): T = identity
+
+        override fun <T> foldRight(identity: T,
+                                   f: (E) -> (T) -> T,
+                                   g: (T) -> (T) -> T): T = identity
+
+        override fun <T> foldInOrder(identity: T,
+                                     f: (T) -> (E) -> (T) -> T): T = identity
+
+        override fun <T> foldPreOrder(identity: T,
+                                      f: (E) -> (T) -> (T) -> T): T = identity
+
+        override fun <T> foldPostOrder(identity: T,
+                                       f: (T) -> (T) -> (E) -> T): T = identity
 
         override fun get(e: @UnsafeVariance E): Result<E> = Result()
 
@@ -163,6 +194,33 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
             e < root -> left.contains(e)
             else -> true
         }
+
+        override fun <T> foldLeft(identity: T,
+                                  f: (T) -> (E) -> T,
+                                  g: (T) -> (T) -> T): T =
+                g(right.foldLeft(identity, f, g))(f(left
+                        .foldLeft(identity, f, g))(root))
+
+        override fun <T> foldRight(identity: T,
+                                   f: (E) -> (T) -> T,
+                                   g: (T) -> (T) -> T): T =
+                g(f(root)(left.foldRight(identity, f, g)))(right
+                        .foldRight(identity, f, g))
+
+        override
+        fun <T> foldInOrder(identity: T, f: (T) -> (E) -> (T) -> T): T =
+                f(left.foldInOrder(identity, f))(root)(right
+                        .foldInOrder(identity, f))
+
+        override
+        fun <T> foldPreOrder(identity: T, f: (E) -> (T) -> (T) -> T): T =
+                f(root)(left.foldPreOrder(identity, f))(right
+                        .foldPreOrder(identity, f))
+
+        override
+        fun <T> foldPostOrder(identity: T, f: (T) -> (T) -> (E) -> T): T =
+                f(left.foldPostOrder(identity, f))(right
+                        .foldPostOrder(identity, f))(root)
 
         override fun get(e: @UnsafeVariance E): Result<E> = when {
             e > root -> right[e]
