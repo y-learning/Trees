@@ -80,6 +80,8 @@ class Map<out K : Comparable<@UnsafeVariance K>, V>(
                 }
             }.getOrElse(false)
 
+    // TODO : Use fold with a zero param instead of filter so you don't have to
+    //  travel the whole list before you take the first occurrence.
     fun get(key: @UnsafeVariance K): Result<Pair<K, V>> = getAll(key)
             .flatMap { list ->
                 list.filter { pair ->
