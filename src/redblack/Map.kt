@@ -1,5 +1,8 @@
 package redblack
 
+import list.List
+import list.concat
+import list.sequence
 import result.Result
 
 class MapEntry<K : Comparable<@UnsafeVariance K>, V> private constructor(
@@ -50,6 +53,15 @@ class Map<out K : Comparable<@UnsafeVariance K>, V>(
     fun isEmpty(): Boolean = delegate.isEmpty
 
     fun size(): Int = delegate.size
+
+    fun values(): List<V> = sequence(delegate.foldInReverseOrder(List())
+    { left: List<Result<V>> ->
+        { mapEntry: MapEntry<K, V> ->
+            { right: List<Result<V>> ->
+                right.concat(left.cons(mapEntry.value))
+            }
+        }
+    }).getOrElse(List())
 
     override fun toString(): String = delegate.toString()
 

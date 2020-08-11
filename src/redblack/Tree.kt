@@ -33,6 +33,9 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
     abstract fun <T> foldInOrder(identity: T, f: (T) -> (E) -> (T) -> T): T
 
+    abstract fun <T> foldInReverseOrder(identity: T,
+                                        f: (T) -> (E) -> (T) -> T): T
+
     abstract fun <T> foldPreOrder(identity: T, f: (E) -> (T) -> (T) -> T): T
 
     abstract fun <T> foldPostOrder(identity: T, f: (T) -> (T) -> (E) -> T): T
@@ -115,6 +118,10 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
 
         override fun <T> foldInOrder(identity: T,
                                      f: (T) -> (E) -> (T) -> T): T = identity
+
+        override
+        fun <T> foldInReverseOrder(identity: T,
+                                   f: (T) -> (E) -> (T) -> T): T = identity
 
         override fun <T> foldPreOrder(identity: T,
                                       f: (E) -> (T) -> (T) -> T): T = identity
@@ -210,6 +217,11 @@ sealed class Tree<out E : Comparable<@UnsafeVariance E>> {
         override
         fun <T> foldInOrder(identity: T, f: (T) -> (E) -> (T) -> T): T =
                 f(left.foldInOrder(identity, f))(root)(right
+                        .foldInOrder(identity, f))
+
+        override
+        fun <T> foldInReverseOrder(identity: T, f: (T) -> (E) -> (T) -> T): T =
+                f(right.foldInOrder(identity, f))(root)(left
                         .foldInOrder(identity, f))
 
         override
