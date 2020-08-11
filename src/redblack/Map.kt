@@ -5,11 +5,11 @@ import list.concat
 import list.sequence
 import result.Result
 
-class MapEntry<K : Comparable<@UnsafeVariance K>, V> private constructor(
+class MapEntry<K : Any, V> private constructor(
         private val key: K, val value: Result<V>) : Comparable<MapEntry<K, V>> {
 
-    override
-    fun compareTo(other: MapEntry<K, V>): Int = key.compareTo(other.key)
+    override fun compareTo(other: MapEntry<K, V>): Int =
+            hashCode().compareTo(other.hashCode())
 
     override fun equals(other: Any?): Boolean = (this === other) ||
             when (other) {
@@ -36,19 +36,56 @@ class MapEntry<K : Comparable<@UnsafeVariance K>, V> private constructor(
 }
 
 class Map<out K : Comparable<@UnsafeVariance K>, V>(
-        private val delegate: Tree<MapEntry<K, V>> = Tree()) {
+        private val delegate: Tree<MapEntry<Int, List<Pair<K, V>>>> = Tree()) {
 
-    operator fun plus(entry: MapEntry<@UnsafeVariance K, V>): Map<K, V> =
-            Map(delegate + entry)
+    private fun getAll(key: @UnsafeVariance K): Result<List<Pair<K, V>>> =
+            delegate[MapEntry(key.hashCode())].flatMap { mapEntry ->
+                mapEntry.value.map { it }
+            }
 
-    operator fun minus(key: @UnsafeVariance K): Map<K, V> =
-            Map(delegate - MapEntry(key))
+
+    operator fun plus(entry: Pair<@UnsafeVariance K, V>): Map<K, V> {
+        val list = getAll(entry.first).map { list ->
+            list.foldLeft(List(entry)) { acc ->
+                { pair: Pair<K, V> ->
+                    if (pair.first == entry.first) acc
+                    else acc.cons(entry)
+                }
+            }
+        }.getOrElse(List(entry))
+
+        return Map(delegate + MapEntry(entry.first.hashCode(), list))
+    }
+
+    operator fun minus(key: @UnsafeVariance K): Map<K, V> {
+        val list = getAll(key).map { list ->
+            list.foldLeft(List<Pair<K, V>>()) { acc ->
+                { pair ->
+                    if (pair.first == key) acc
+                    else acc.cons(pair)
+                }
+            }
+        }.getOrElse(List())
+
+        return when {
+            list.isEmpty() -> Map(delegate - MapEntry(key.hashCode()))
+            else -> Map(delegate + MapEntry(key.hashCode(), list))
+        }
+    }
 
     fun contains(key: @UnsafeVariance K): Boolean =
-            delegate.contains(MapEntry(key))
+            getAll(key).map { list: List<Pair<K, V>> ->
+                list.exists { pair ->
+                    pair.first == key
+                }
+            }.getOrElse(false)
 
-    fun get(key: @UnsafeVariance K): Result<MapEntry<@UnsafeVariance K, V>> =
-            delegate[MapEntry(key)]
+    fun get(key: @UnsafeVariance K): Result<Pair<K, V>> = getAll(key)
+            .flatMap { list ->
+                list.filter { pair ->
+                    pair.first == key
+                }.firstSafe()
+            }
 
     fun isEmpty(): Boolean = delegate.isEmpty
 
@@ -56,12 +93,29 @@ class Map<out K : Comparable<@UnsafeVariance K>, V>(
 
     fun values(): List<V> = sequence(delegate.foldInReverseOrder(List())
     { left: List<Result<V>> ->
-        { mapEntry: MapEntry<K, V> ->
+        { mapEntry: MapEntry<Int, List<Pair<K, V>>> ->
             { right: List<Result<V>> ->
-                right.concat(left.cons(mapEntry.value))
+                right.concat(mapEntry.value.map {
+                    it.map { pair -> Result(pair.second) }
+                }.getOrElse(List()).concat(left))
             }
         }
     }).getOrElse(List())
+
+    fun <B> foldLeft(identity: B,
+                     f: (B) -> (MapEntry<@UnsafeVariance K, V>) -> B,
+                     g: (B) -> (B) -> B): B = delegate.foldLeft(identity,
+            { acc: B ->
+                { mapEntry: MapEntry<Int, List<Pair<K, V>>> ->
+                    mapEntry.value.map { list: List<Pair<K, V>> ->
+                        list.map { pair: Pair<K, V> ->
+                            MapEntry(pair.first, pair.second)
+                        }
+                    }.map {
+                        g(acc)(it.foldLeft(identity, f))
+                    }.getOrElse(identity)
+                }
+            }, g)
 
     override fun toString(): String = delegate.toString()
 
