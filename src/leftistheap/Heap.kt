@@ -1,6 +1,8 @@
 package leftistheap
 
 import leftistheap.Heap.E
+import list.List
+import option.Option
 import result.Result
 
 sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
@@ -17,7 +19,11 @@ sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
 
     abstract fun get(index: Int): Result<E>
 
+    abstract fun pop(): Option<Pair<E, Heap<E>>>
+
     operator fun plus(e: @UnsafeVariance E): Heap<E> = merge(this, Heap(e))
+
+    fun toList(): List<E> = list.unfold(this) { it.pop() }
 
     abstract class Empty<out E : Comparable<@UnsafeVariance E>> : Heap<E>() {
         override
@@ -38,6 +44,8 @@ sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
 
         override fun get(index: Int): Result<E> =
                 Result.failure(NoSuchElementException("Index out of bounds."))
+
+        override fun pop(): Option<Pair<E, Heap<E>>> = Option()
 
         override fun toString(): String = "E"
     }
@@ -60,12 +68,17 @@ sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
 
         override val isEmpty: Boolean = false
 
-        override fun tail(): Result<Heap<E>> = Result(merge(l, r))
+        private fun mergeLeftRight() = merge(l, r)
+
+        override fun tail(): Result<Heap<E>> = Result(mergeLeftRight())
 
         override fun get(index: Int): Result<E> = when (index) {
             0 -> Result(h)
             else -> tail().flatMap { it.get(index - 1) }
         }
+
+        override
+        fun pop(): Option<Pair<E, Heap<E>>> = Option(Pair(h, mergeLeftRight()))
 
         override fun toString(): String = "(T $l $h $r)"
     }
