@@ -23,7 +23,28 @@ sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
 
     operator fun plus(e: @UnsafeVariance E): Heap<E> = merge(this, Heap(e))
 
-    fun toList(): List<E> = list.unfold(this) { it.pop() }
+    fun <T, S, U> unfold(
+            start: S,
+            nextVal: (S) -> Option<Pair<@UnsafeVariance T, S>>,
+            identity: U,
+            f: (U) -> (T) -> U): U {
+        tailrec
+        fun unfold(acc: U, start: S): U = when (val next = nextVal(start)) {
+            Option.None -> acc
+            is Option.Some -> {
+                val pair = next.value
+                unfold(f(acc)(pair.first), pair.second)
+            }
+        }
+
+        return unfold(identity, start)
+    }
+
+    fun <U> foldLeft(identity: U, f: (U) -> (E) -> U): U =
+            unfold(this, { it.pop() }, identity, f)
+
+    fun toList(): List<E> =
+            foldLeft(List<E>()) { acc -> { e -> acc.cons(e) } }.reverse()
 
     abstract class Empty<out E : Comparable<@UnsafeVariance E>> : Heap<E>() {
         override
