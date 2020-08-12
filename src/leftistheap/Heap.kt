@@ -15,6 +15,8 @@ sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
 
     abstract fun tail(): Result<Heap<E>>
 
+    abstract fun get(index: Int): Result<E>
+
     operator fun plus(e: @UnsafeVariance E): Heap<E> = merge(this, Heap(e))
 
     abstract class Empty<out E : Comparable<@UnsafeVariance E>> : Heap<E>() {
@@ -33,6 +35,9 @@ sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
 
         override fun tail(): Result<Heap<E>> =
                 Result.failure("tail() called on empty heap.")
+
+        override fun get(index: Int): Result<E> =
+                Result.failure(NoSuchElementException("Index out of bounds."))
 
         override fun toString(): String = "E"
     }
@@ -56,6 +61,11 @@ sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
         override val isEmpty: Boolean = false
 
         override fun tail(): Result<Heap<E>> = Result(merge(l, r))
+
+        override fun get(index: Int): Result<E> = when (index) {
+            0 -> Result(h)
+            else -> tail().flatMap { it.get(index - 1) }
+        }
 
         override fun toString(): String = "(T $l $h $r)"
     }
