@@ -1,14 +1,14 @@
 package leftistheap
 
-import leftistheap.Heap.E
 import list.List
 import option.Option
 import result.Result
 
-sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
+sealed class Heap<out E> {
     internal abstract val head: Result<E>
     internal abstract val left: Result<Heap<E>>
     internal abstract val right: Result<Heap<E>>
+    internal abstract val comparator: Result<Comparator<@UnsafeVariance E>>
 
     protected abstract val rank: Int
 
@@ -21,7 +21,8 @@ sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
 
     abstract fun pop(): Option<Pair<E, Heap<E>>>
 
-    operator fun plus(e: @UnsafeVariance E): Heap<E> = merge(this, Heap(e))
+    operator fun plus(e: @UnsafeVariance E): Heap<E> =
+            merge(this, Heap(e, comparator))
 
     fun <T, S, U> unfold(
             start: S,
@@ -46,19 +47,23 @@ sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
     fun toList(): List<E> =
             foldLeft(List<E>()) { acc -> { e -> acc.cons(e) } }.reverse()
 
-    abstract class Empty<out E : Comparable<@UnsafeVariance E>> : Heap<E>() {
+    class Empty<out E>(
+            override
+            val comparator: Result<Comparator<@UnsafeVariance E>> = Result()
+    ) : Heap<E>() {
         override
         val head: Result<E> = Result.failure("head() called on empty heap")
 
-        override val left: Result<Heap<E>> = Result(E)
+        override val left: Result<Heap<E>> = Result(this)
 
-        override val right: Result<Heap<E>> = Result(E)
+        override val right: Result<Heap<E>> = Result(this)
 
         override val rank: Int = 0
 
         override val size: Int = 0
 
         override val isEmpty: Boolean = true
+
 
         override fun tail(): Result<Heap<E>> =
                 Result.failure("tail() called on empty heap.")
@@ -71,13 +76,13 @@ sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
         override fun toString(): String = "E"
     }
 
-    internal object E : Empty<Nothing>()
-
-    internal class H<out E : Comparable<@UnsafeVariance E>>(
+    internal class H<out E>(
             override val rank: Int,
             private val l: Heap<E>,
             private val h: E,
-            private val r: Heap<E>) : Heap<E>() {
+            private val r: Heap<E>,
+            override val comparator: Result<Comparator<@UnsafeVariance E>> =
+                    l.comparator.orElse { r.comparator }) : Heap<E>() {
 
         override val head: Result<E> = Result(h)
 
@@ -105,22 +110,49 @@ sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
     }
 
     companion object {
-        operator fun <E : Comparable<E>> invoke(): Heap<E> = E
+        operator fun <E : Comparable<E>> invoke(): Heap<E> = Empty()
 
-        operator fun <E : Comparable<E>> invoke(e: E): Heap<E> = H(1, E, e, E)
+        operator fun <E> invoke(comparator: Comparator<E>): Heap<E> =
+                Empty(Result(comparator))
 
-        private fun <E : Comparable<E>> make(head: E,
-                                             first: Heap<E>,
-                                             second: Heap<E>): Heap<E> = when {
-            first.rank >= second.rank -> H(second.rank + 1, first, head, second)
-            else -> H(first.rank + 1, second, head, first)
-        }
+        operator fun <E> invoke(comparator: Result<Comparator<E>>): Heap<E> =
+                Empty(comparator)
 
-        fun <E : Comparable<E>> merge(heap1: Heap<E>, heap2: Heap<E>): Heap<E> =
+        operator
+        fun <E> invoke(e: E, comparator: Result<Comparator<E>>): Heap<E> =
+                H(1, Empty(comparator), e, Empty(comparator), comparator)
+
+        operator
+        fun <E> invoke(e: E, comparator: Comparator<E>): Heap<E> =
+                H(1, Empty(Result(comparator)), e,
+                        Empty(Result(comparator)), Result(comparator))
+
+        operator fun <E : Comparable<E>> invoke(e: E): Heap<E> =
+                invoke(e, Comparator { o1: E, o2: E -> o1.compareTo(o2) })
+
+        private
+        fun <E> make(head: E, first: Heap<E>, second: Heap<E>): Heap<E> =
+                first.comparator.orElse { second.comparator }.let {
+                    when {
+                        first.rank >= second.rank ->
+                            H(second.rank + 1, first, head, second, it)
+                        else -> H(first.rank + 1, second, head, first, it)
+                    }
+                }
+
+        private fun <E> compare(head1: E, head2: E,
+                                comparator: Result<Comparator<E>>): Int =
+                comparator.map { it.compare(head1, head2) }
+                        .getOrElse { (head1 as Comparable<E>).compareTo(head2) }
+
+
+        fun <E> merge(heap1: Heap<E>, heap2: Heap<E>,
+                      comparator: Result<Comparator<E>> = heap1.comparator
+                              .orElse { heap2.comparator }): Heap<E> =
                 heap1.head.flatMap { head1: E ->
                     heap2.head.flatMap { head2: E ->
                         when {
-                            head1 <= head2 -> {
+                            compare(head1, head2, comparator) <= 0 -> {
                                 heap1.left.flatMap { left1: Heap<E> ->
                                     heap1.right.map { right1: Heap<E> ->
                                         make(head1, left1, merge(right1, heap2))
@@ -138,7 +170,7 @@ sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
                         }
                     }
                 }.getOrElse(when (heap1) {
-                    E -> heap2
+                    is Empty -> heap2
                     else -> heap1
                 })
     }
