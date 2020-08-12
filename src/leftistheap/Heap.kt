@@ -13,6 +13,8 @@ sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
     abstract val size: Int
     abstract val isEmpty: Boolean
 
+    abstract fun tail(): Result<Heap<E>>
+
     operator fun plus(e: @UnsafeVariance E): Heap<E> = merge(this, Heap(e))
 
     abstract class Empty<out E : Comparable<@UnsafeVariance E>> : Heap<E>() {
@@ -28,6 +30,9 @@ sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
         override val size: Int = 0
 
         override val isEmpty: Boolean = true
+
+        override fun tail(): Result<Heap<E>> =
+                Result.failure("tail() called on empty heap.")
 
         override fun toString(): String = "E"
     }
@@ -49,6 +54,8 @@ sealed class Heap<out E : Comparable<@UnsafeVariance E>> {
         override val size: Int = 1 + l.size + r.size
 
         override val isEmpty: Boolean = false
+
+        override fun tail(): Result<Heap<E>> = Result(merge(l, r))
 
         override fun toString(): String = "(T $l $h $r)"
     }
