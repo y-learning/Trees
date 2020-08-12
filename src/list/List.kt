@@ -11,33 +11,35 @@ const val FIRST_EMPTY = "first called on an empty list"
 fun inc(i: Int) = i + 1
 
 fun <T> flatten(list: List<List<T>>): List<T> =
-    list.foldLeft(List()) { list1 -> list1::concat }
+        list.foldLeft(List()) { list1 -> list1::concat }
 
 fun <E> List<E>.concat(list: List<E>) = List.concatViaFoldLeft(this, list)
 
 fun <E> toList(result: Result<E>): List<E> =
-    result.map { List(it) }.getOrElse(List())
+        result.map { List(it) }.getOrElse(List())
 
 fun <E> flattenResult(list: List<Result<E>>): List<E> =
-    list.flatMap(::toList)
+        list.flatMap(::toList)
 
 fun <E> sequence(list: List<Result<E>>): Result<List<E>> =
-    list.filter { !it.isEmpty() }
-        .foldRight(Result(List())) { item: Result<E> ->
+        list.filter { !it.isEmpty() }.foldRight(Result(List()))
+        { item: Result<E> ->
             { acc: Result<List<E>> ->
                 result.map2(item, acc) { a: E -> { b: List<E> -> b.cons(a) } }
             }
         }
 
 fun <E, U> traverse(list: List<E>, f: (E) -> Result<U>): Result<List<U>> =
-    list.coFoldRight(Result(List())) { item: E ->
-        { acc: Result<List<U>> ->
-            result.map2(acc, f(item)) { a: List<U> -> { b: U -> a.cons(b) } }
+        list.coFoldRight(Result(List())) { item: E ->
+            { acc: Result<List<U>> ->
+                result.map2(acc, f(item)) { a: List<U> ->
+                    { b: U -> a.cons(b) }
+                }
+            }
         }
-    }
 
 fun <E> sequence2(list: List<Result<E>>): Result<List<E>> =
-    traverse(list) { x: Result<E> -> x }
+        traverse(list) { x: Result<E> -> x }
 
 fun <E, T, U> zipWith(l1: List<E>, l2: List<T>, f: (E) -> (T) -> U): List<U> {
 
@@ -53,30 +55,46 @@ fun <E, T, U> zipWith(l1: List<E>, l2: List<T>, f: (E) -> (T) -> U): List<U> {
 }
 
 fun <E, T, U> product(l1: List<E>, l2: List<T>, f: (E) -> (T) -> U): List<U> =
-    l1.flatMap { e: E -> l2.map { t: T -> f(e)(t) } }
+        l1.flatMap { e: E -> l2.map { t: T -> f(e)(t) } }
 
 fun <T, U> unzip(list: List<Pair<T, U>>): Pair<List<T>, List<U>> =
-    list.unzip { it }
+        list.unzip { it }
+
+
+fun <T, S> unfold(
+        start: S,
+        nextVal: (S) -> Option<Pair<@UnsafeVariance T, S>>): List<T> {
+    tailrec fun unfold(acc: List<T>, start: S): List<T> =
+            when (val next = nextVal(start)) {
+                Option.None -> acc
+                is Option.Some -> {
+                    val pair = next.value
+                    unfold(acc.cons(pair.first), pair.second)
+                }
+            }
+
+    return unfold(List(), start).reverse()
+}
 
 fun <T, S> unfoldRec(
-    s: S,
-    f: (S) -> Option<Pair<@UnsafeVariance T, S>>): List<T> =
-    f(s).map { pair: Pair<T, S> ->
-        unfoldRec(pair.second, f).cons(pair.first)
-    }.getOrElse { List.Nil }
+        s: S,
+        f: (S) -> Option<Pair<@UnsafeVariance T, S>>): List<T> =
+        f(s).map { pair: Pair<T, S> ->
+            unfoldRec(pair.second, f).cons(pair.first)
+        }.getOrElse { List.Nil }
 
 fun <T, S> unfoldCoRec(
-    s: S,
-    nextVal: (S) -> Result<Pair<@UnsafeVariance T, S>>): Result<List<T>> {
+        s: S,
+        nextVal: (S) -> Result<Pair<@UnsafeVariance T, S>>): Result<List<T>> {
     tailrec fun unfoldCoRecIter(acc: List<T>, s1: S): Result<List<T>> =
-        when (val next = nextVal(s1)) {
-            Result.Empty -> Result(acc)
-            is Result.Failure -> Result.failure(next.exception)
-            is Result.Success -> {
-                val pair = next.value
-                unfoldCoRecIter(acc.cons(pair.first), pair.second)
+            when (val next = nextVal(s1)) {
+                Result.Empty -> Result(acc)
+                is Result.Failure -> Result.failure(next.exception)
+                is Result.Success -> {
+                    val pair = next.value
+                    unfoldCoRecIter(acc.cons(pair.first), pair.second)
+                }
             }
-        }
 
     return unfoldCoRecIter(List(), s).map(List<T>::reverse)
 }
@@ -108,9 +126,9 @@ sealed class List<out E> {
     abstract fun getAt(index: Int): Result<E>
 
     abstract fun <U> foldLeft(
-        identity: U,
-        p: (U) -> Boolean,
-        f: (U) -> (E) -> U): U
+            identity: U,
+            p: (U) -> Boolean,
+            f: (U) -> (E) -> U): U
 
     abstract fun <U> foldLeft(identity: U, zero: U, f: (U) -> (E) -> U): U
 
@@ -131,7 +149,7 @@ sealed class List<out E> {
     fun drop(n: Int): List<E> = Companion.drop(n, this)
 
     fun dropWhile(list: List<@UnsafeVariance E>, p: (E) -> Boolean): List<E> =
-        Companion.dropWhile(list, p)
+            Companion.dropWhile(list, p)
 
     fun reverse(): List<E> = Companion.reverse(invoke(), this)
 
@@ -142,27 +160,27 @@ sealed class List<out E> {
     fun init(): List<E> = reverse().drop(1).reverse()
 
     fun <U> foldRight(identity: U, f: (E) -> (U) -> U): U =
-        Companion.foldRight(this, identity, f)
+            Companion.foldRight(this, identity, f)
 
     fun <U> foldLeft(identity: U, f: (U) -> (E) -> U): U =
-        Companion.foldLeft(this, identity, f)
+            Companion.foldLeft(this, identity, f)
 
     fun <U> foldRightViaFoldLeft(identity: U, f: (E) -> (U) -> U): U =
-        this.foldLeft(identity, { x -> { y -> f(y)(x) } })
+            this.foldLeft(identity, { x -> { y -> f(y)(x) } })
 
     fun <U> coFoldRight(identity: U, f: (E) -> (U) -> U): U =
-        Companion.coFoldRight(this.reverse(), identity, f)
+            Companion.coFoldRight(this.reverse(), identity, f)
 
     fun <U> map(f: (E) -> U): List<U> =
-        this.coFoldRight(Nil as List<U>) { e -> { it.cons(f(e)) } }
+            this.coFoldRight(Nil as List<U>) { e -> { it.cons(f(e)) } }
 
     fun filter(p: (E) -> Boolean): List<E> =
-        this.foldLeft(Nil as List<E>) { acc ->
-            { e ->
-                if (p(e)) acc.cons(e)
-                else acc
-            }
-        }.reverse()
+            this.foldLeft(Nil as List<E>) { acc ->
+                { e ->
+                    if (p(e)) acc.cons(e)
+                    else acc
+                }
+            }.reverse()
 
     fun <U> flatMap(f: (E) -> List<U>): List<U> = flatten(map(f))
 
@@ -171,16 +189,17 @@ sealed class List<out E> {
     }
 
     fun <E1, E2> unzip(f: (E) -> Pair<E1, E2>): Pair<List<E1>, List<E2>> =
-        coFoldRight(Pair(Nil, Nil)) { e: E ->
-            { acc: Pair<List<E1>, List<E2>> ->
-                f(e).let {
-                    Pair(acc.first.cons(it.first), acc.second.cons(it.second))
+            coFoldRight(Pair(Nil, Nil)) { e: E ->
+                { acc: Pair<List<E1>, List<E2>> ->
+                    f(e).let {
+                        Pair(acc.first.cons(it.first),
+                                acc.second.cons(it.second))
+                    }
                 }
             }
-        }
 
     fun exists(p: (E) -> Boolean): Boolean =
-        foldLeft(identity = false, zero = true) { { e: E -> p(e) } }
+            foldLeft(identity = false, zero = true) { { e: E -> p(e) } }
 
     fun forAll(p: (E) -> Boolean): Boolean = !exists { e: E -> !p(e) }
 
@@ -190,14 +209,32 @@ sealed class List<out E> {
 //        }
 
     fun <U> parFoldLeft(
-        es: ExecutorService,
-        identity: U,
-        f: (U) -> (E) -> U,
-        g: (U) -> (U) -> U): Result<U> =
-        try {
-            val result = divide(6)
-                .map { list: List<E> ->
-                    es.submit<U> { list.foldLeft(identity, f) }
+            es: ExecutorService,
+            identity: U,
+            f: (U) -> (E) -> U,
+            g: (U) -> (U) -> U): Result<U> =
+            try {
+                val result = divide(6)
+                        .map { list: List<E> ->
+                            es.submit<U> { list.foldLeft(identity, f) }
+                        }.map<U> { future ->
+                            try {
+                                future.get()
+                            } catch (e: InterruptedException) {
+                                throw RuntimeException(e)
+                            } catch (e: ExecutionException) {
+                                throw RuntimeException(e)
+                            }
+                        }
+                Result(result.foldLeft(identity, g))
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+
+    fun <U> parMap(es: ExecutorService, g: (E) -> U): Result<List<U>> =
+            try {
+                val result = map { e: E ->
+                    es.submit<U> { g(e) }
                 }.map<U> { future ->
                     try {
                         future.get()
@@ -207,29 +244,11 @@ sealed class List<out E> {
                         throw RuntimeException(e)
                     }
                 }
-            Result(result.foldLeft(identity, g))
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
 
-    fun <U> parMap(es: ExecutorService, g: (E) -> U): Result<List<U>> =
-        try {
-            val result = map { e: E ->
-                es.submit<U> { g(e) }
-            }.map<U> { future ->
-                try {
-                    future.get()
-                } catch (e: InterruptedException) {
-                    throw RuntimeException(e)
-                } catch (e: ExecutionException) {
-                    throw RuntimeException(e)
-                }
+                Result(result)
+            } catch (e: Exception) {
+                Result.failure(e)
             }
-
-            Result(result)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
 
     abstract class Empty<E> : List<E>() {
         override val length: Int get() = 0
@@ -251,18 +270,18 @@ sealed class List<out E> {
         override fun lastSafe(): Result<E> = Result()
 
         override fun getAt(index: Int): Result<E> =
-            Result.failure("getAt called on an empty list.")
+                Result.failure("getAt called on an empty list.")
 
         override fun <U> foldLeft(
-            identity: U,
-            p: (U) -> Boolean,
-            f: (U) -> (E) -> U): U = identity
+                identity: U,
+                p: (U) -> Boolean,
+                f: (U) -> (E) -> U): U = identity
 
         override fun <U> foldLeft(identity: U, zero: U, f: (U) -> (E) -> U): U =
-            identity
+                identity
 
         override fun splitAt(index: Int): Pair<List<E>, List<E>> =
-            Pair(this, this)
+                Pair(this, this)
 
         override fun startWith(sub: List<E>): Boolean = false
 
@@ -280,7 +299,7 @@ sealed class List<out E> {
     internal object Nil : Empty<Nothing>()
 
     internal class Cons<E>(private val head: E, private val tail: List<E>) :
-        List<E>() {
+            List<E>() {
         override val length: Int = tail.length + 1
 
         override fun isEmpty(): Boolean = false
@@ -292,8 +311,8 @@ sealed class List<out E> {
         override fun setHead(x: E): List<E> = this.tail.cons(x)
 
         private tailrec fun toString(acc: String, list: List<E>): String =
-            if (list.isEmpty()) acc
-            else toString("$acc${list.first()}, ", list.rest())
+                if (list.isEmpty()) acc
+                else toString("$acc${list.first()}, ", list.rest())
 
         override fun first(): E = this.head
 
@@ -302,12 +321,12 @@ sealed class List<out E> {
         override fun rest(): List<E> = this.tail
 
         override fun lastSafe(): Result<E> =
-            foldLeft(Result()) { { item -> Result(item) } }
+                foldLeft(Result()) { { item -> Result(item) } }
 
         override fun <U> foldLeft(
-            identity: U,
-            p: (U) -> Boolean,
-            f: (U) -> (E) -> U): U {
+                identity: U,
+                p: (U) -> Boolean,
+                f: (U) -> (E) -> U): U {
             tailrec fun foldLeftIter(list: List<E>, acc: U): U = when (list) {
                 is Cons ->
                     if (p(acc)) acc
@@ -320,30 +339,30 @@ sealed class List<out E> {
 
         override fun <U> foldLeft(identity: U, zero: U, f: (U) -> (E) -> U): U {
             fun <U> foldLeft(
-                acc: U,
-                zero: U,
-                list: List<E>,
-                f: (U) -> (E) -> U): U =
-                when (list) {
-                    is Cons ->
-                        if (acc == zero) acc
-                        else foldLeft(f(acc)(list.head), zero, list.tail, f)
-                    else -> acc
-                }
+                    acc: U,
+                    zero: U,
+                    list: List<E>,
+                    f: (U) -> (E) -> U): U =
+                    when (list) {
+                        is Cons ->
+                            if (acc == zero) acc
+                            else foldLeft(f(acc)(list.head), zero, list.tail, f)
+                        else -> acc
+                    }
 
             return foldLeft(identity, zero, this, f)
         }
 
         override fun getAt(index: Int): Result<E> =
-            Pair(Result.failure<E>("Index out of bound"), index).let {
-                if (index < 0 || index >= length()) it
-                else
-                    foldLeft<Pair<Result<E>, Int>>(it, { pair ->
-                        pair.second < 0
-                    }) { pair ->
-                        { e: E -> Pair(Result(e), pair.second - 1) }
-                    }
-            }.first
+                Pair(Result.failure<E>("Index out of bound"), index).let {
+                    if (index < 0 || index >= length()) it
+                    else
+                        foldLeft<Pair<Result<E>, Int>>(it, { pair ->
+                            pair.second < 0
+                        }) { pair ->
+                            { e: E -> Pair(Result(e), pair.second - 1) }
+                        }
+                }.first
 
         override fun splitAt(index: Int): Pair<List<E>, List<E>> {
             val identity = Triple<List<E>, List<E>, Int>(this, Nil, 0)
@@ -352,7 +371,7 @@ sealed class List<out E> {
                 return Pair(identity.first, identity.second)
 
             val fold = foldLeft<Triple<List<E>, List<E>, Int>>(identity,
-                { triple -> triple.third == index }) { triple ->
+                    { triple -> triple.third == index }) { triple ->
                 { e: E ->
                     val list = triple.first.rest()
                     val acc = triple.second.cons(e)
@@ -368,8 +387,8 @@ sealed class List<out E> {
             tailrec fun startWith(list: List<E>, sub: List<E>): Boolean = when {
                 sub.isEmpty() -> true
                 list.first() == sub.first() -> startWith(
-                    list.rest(),
-                    sub.rest())
+                        list.rest(),
+                        sub.rest())
                 else -> false
             }
 
@@ -380,34 +399,34 @@ sealed class List<out E> {
             if (list.length > length) return false
 
             tailrec fun hasSublistIter(list: List<E>, sub: List<E>): Boolean =
-                when {
-                    list.isEmpty() -> false
-                    list.startWith(sub) -> true
-                    else -> hasSublistIter(list.rest(), sub)
-                }
+                    when {
+                        list.isEmpty() -> false
+                        list.startWith(sub) -> true
+                        else -> hasSublistIter(list.rest(), sub)
+                    }
 
             return hasSublistIter(this, list)
         }
 
         override fun <T> groupBy(f: (E) -> T): Map<T, List<E>> =
-            reverse().foldLeft(mapOf()) { map: Map<T, List<E>> ->
-                { e: E ->
-                    f(e).let {
-                        map + (it to map.getOrDefault(it, Nil).cons(e))
+                reverse().foldLeft(mapOf()) { map: Map<T, List<E>> ->
+                    { e: E ->
+                        f(e).let {
+                            map + (it to map.getOrDefault(it, Nil).cons(e))
+                        }
                     }
                 }
-            }
 
         override fun splitListAt(index: Int): List<List<E>> {
             if (index < 0 || index > length)
                 return List(this)
 
             tailrec fun splitIter(acc: List<E>, list: List<E>, i: Int):
-                List<List<E>> =
-                if (i == index)
-                    List(acc.reverse(), list)
-                else
-                    splitIter(acc.cons(list.first()), list.rest(), inc(i))
+                    List<List<E>> =
+                    if (i == index)
+                        List(acc.reverse(), list)
+                    else
+                        splitIter(acc.cons(list.first()), list.rest(), inc(i))
 
             return splitIter(Nil, this, 0)
         }
@@ -415,10 +434,10 @@ sealed class List<out E> {
         override fun divide(depth: Int): List<List<E>> {
             tailrec
             fun divideIter(acc: List<List<E>>, steps: Int): List<List<E>> =
-                if (steps == depth || acc.first().length < 2) acc
-                else divideIter(
-                    acc.flatMap { it.splitListAt(it.length / 2) },
-                    inc(steps))
+                    if (steps == depth || acc.first().length < 2) acc
+                    else divideIter(
+                            acc.flatMap { it.splitListAt(it.length / 2) },
+                            inc(steps))
 
             return divideIter(List(this), 0)
         }
@@ -429,57 +448,57 @@ sealed class List<out E> {
     companion object {
         operator
         fun <E> invoke(vararg az: E): List<E> =
-            az.foldRight(Nil) { item: E, acc: List<E> ->
-                Cons(item, acc)
-            }
+                az.foldRight(Nil) { item: E, acc: List<E> ->
+                    Cons(item, acc)
+                }
 
         internal tailrec fun <E> drop(i: Int, list: List<E>): List<E> =
-            when {
-                i <= 0 -> list
-                list.isEmpty() -> list
-                else -> drop(i - 1, list.rest())
-            }
+                when {
+                    i <= 0 -> list
+                    list.isEmpty() -> list
+                    else -> drop(i - 1, list.rest())
+                }
 
         private tailrec fun <E> dropWhile(list: List<E>, p: (E) -> Boolean):
-            List<E> =
-            when {
-                list.isEmpty() -> list
-                p(list.first()) -> dropWhile(list.rest(), p)
-                else -> list
-            }
+                List<E> =
+                when {
+                    list.isEmpty() -> list
+                    p(list.first()) -> dropWhile(list.rest(), p)
+                    else -> list
+                }
 
         private tailrec fun <E> reverse(
-            acc: List<E>,
-            list: List<E>): List<E> =
-            if (list.isEmpty()) acc
-            else reverse(acc.cons(list.first()), list.rest())
+                acc: List<E>,
+                list: List<E>): List<E> =
+                if (list.isEmpty()) acc
+                else reverse(acc.cons(list.first()), list.rest())
 
         fun <T, U> foldRight(
-            list: List<T>,
-            identity: U,
-            f: (T) -> (U) -> U): U =
-            if (list.isEmpty()) identity
-            else f(list.first())(foldRight(list.rest(), identity, f))
+                list: List<T>,
+                identity: U,
+                f: (T) -> (U) -> U): U =
+                if (list.isEmpty()) identity
+                else f(list.first())(foldRight(list.rest(), identity, f))
 
         tailrec fun <E, U> foldLeft(
-            list: List<E>, acc: U,
-            f: (U) -> (E) -> U): U =
-            if (list.isEmpty()) acc
-            else foldLeft(list.rest(), f(acc)(list.first()), f)
+                list: List<E>, acc: U,
+                f: (U) -> (E) -> U): U =
+                if (list.isEmpty()) acc
+                else foldLeft(list.rest(), f(acc)(list.first()), f)
 
         tailrec fun <T, U> coFoldRight(
-            list: List<T>,
-            acc: U,
-            f: (T) -> (U) -> U): U =
-            if (list.isEmpty()) acc
-            else coFoldRight(list.rest(), f(list.first())(acc), f)
+                list: List<T>,
+                acc: U,
+                f: (T) -> (U) -> U): U =
+                if (list.isEmpty()) acc
+                else coFoldRight(list.rest(), f(list.first())(acc), f)
 
         fun <T> concatViaFoldRight(
-            list1: List<T>,
-            list2: List<T>): List<T> =
-            list1.foldRight(list2, { x -> { y -> y.cons(x) } })
+                list1: List<T>,
+                list2: List<T>): List<T> =
+                list1.foldRight(list2, { x -> { y -> y.cons(x) } })
 
         fun <T> concatViaFoldLeft(list1: List<T>, list2: List<T>): List<T> =
-            list1.reverse().foldLeft(list2, { x -> x::cons })
+                list1.reverse().foldLeft(list2, { x -> x::cons })
     }
 }
